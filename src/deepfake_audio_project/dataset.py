@@ -1,4 +1,5 @@
 import os
+import random
 import numpy as np
 
 
@@ -16,6 +17,7 @@ def load_dataset(dataset_path, preprocessor, max_files_per_class=None, use_enhan
             continue
 
         audio_files = [f for f in os.listdir(class_path) if f.lower().endswith(AUDIO_EXTENSIONS)]
+        random.Random(42).shuffle(audio_files)
         if max_files_per_class:
             audio_files = audio_files[:max_files_per_class]
 

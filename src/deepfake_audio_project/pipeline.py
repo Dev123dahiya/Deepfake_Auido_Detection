@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
+from collections import Counter
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.utils import to_categorical
@@ -38,6 +39,12 @@ def main_training_pipeline(config: TrainingConfig):
     label_encoder = LabelEncoder()
     y_encoded = label_encoder.fit_transform(y)
     y_categorical = to_categorical(y_encoded, num_classes=2)
+    class_counts = Counter(y.tolist())
+    if any(count < 3 for count in class_counts.values()):
+        raise ValueError(
+            f"Too few readable samples per class after loading: {dict(class_counts)}. "
+            "Increase --max-files or fix corrupted audio files."
+        )
 
     X_train, X_temp, y_train, y_temp = train_test_split(
         X, y_categorical, test_size=0.3, random_state=config.random_seed, stratify=y_encoded
@@ -71,4 +78,3 @@ def main_training_pipeline(config: TrainingConfig):
     model.save(str(final_model_path))
     print(f"Model saved to: {final_model_path}")
     return model, preprocessor, label_encoder, history
-

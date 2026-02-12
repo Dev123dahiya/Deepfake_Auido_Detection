@@ -5,3 +5,6 @@ outputs/
 .ipynb_checkpoints/
 .DS_Store
 Thumbs.db
+
+.venv/
+dataset/

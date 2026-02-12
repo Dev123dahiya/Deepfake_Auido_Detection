@@ -7,6 +7,7 @@ import pandas as pd
 
 from .evaluation import predict_single_audio
 from .forensics_api import DeepfakeForensicsIntegration
+from .security import AuditLogger, DriftMonitor, RiskPolicy, is_ood_prediction
 
 
 def predict_with_ensemble(model, preprocessor, audio_path, use_api_ensemble=False, elevenlabs_key=None, resemble_key=None):
@@ -47,6 +48,57 @@ def test_single_audio(model, preprocessor, audio_path, use_enhanced=True):
         "real_prob": prediction[0][0],
         "fake_prob": prediction[0][1],
     }
+
+
+def secure_predict_single_audio(
+    model,
+    preprocessor,
+    audio_path,
+    use_enhanced=True,
+    ood_confidence_threshold=0.60,
+    ood_entropy_threshold=0.68,
+    low_risk_threshold=0.30,
+    high_risk_threshold=0.75,
+    audit_log_path="outputs/security_audit.jsonl",
+    drift_monitor=None,
+):
+    base_result = test_single_audio(model, preprocessor, audio_path, use_enhanced=use_enhanced)
+    if not base_result:
+        return None
+
+    probs = np.array([base_result["real_prob"], base_result["fake_prob"]], dtype=float)
+    ood_info = is_ood_prediction(
+        probs,
+        confidence_threshold=ood_confidence_threshold,
+        entropy_threshold=ood_entropy_threshold,
+    )
+    risk_policy = RiskPolicy(low_risk_threshold=low_risk_threshold, high_risk_threshold=high_risk_threshold)
+    decision = risk_policy.classify(base_result["fake_prob"], is_ood=ood_info["is_ood"])
+
+    if drift_monitor is None:
+        drift_monitor = DriftMonitor()
+    drift_info = drift_monitor.update(base_result["fake_prob"])
+
+    result = {
+        **base_result,
+        "ood": ood_info,
+        "security_decision": decision,
+        "drift": drift_info,
+    }
+
+    AuditLogger(log_path=audit_log_path).log(
+        {
+            "file": audio_path,
+            "prediction": base_result["prediction"],
+            "confidence": base_result["confidence"],
+            "real_prob": base_result["real_prob"],
+            "fake_prob": base_result["fake_prob"],
+            "ood": ood_info,
+            "security_decision": decision,
+            "drift": drift_info,
+        }
+    )
+    return result
 
 
 def test_batch_files(model, preprocessor, file_paths, use_enhanced=True):
@@ -125,4 +177,3 @@ def visualize_prediction(preprocessor, audio_path, model, use_enhanced=True):
     plt.tight_layout()
     plt.show()
     return predicted_class, confidence
-

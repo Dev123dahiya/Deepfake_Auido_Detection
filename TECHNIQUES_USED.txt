@@ -1,0 +1,81 @@
+TECHNIQUES USED IN THIS DEEPFAKE AUDIO DETECTION PROJECT
+
+1. Audio preprocessing
+- Fixed-duration loading (3 seconds)
+- Resampling to 16 kHz
+- Padding/truncation for uniform length
+
+2. Core audio features
+- Mel Spectrogram (log-mel)
+- MFCC (Mel-Frequency Cepstral Coefficients)
+
+3. Enhanced forensic features
+- Laplacian features on mel spectrogram (edge-based artifacts)
+- LFCC (Linear Frequency Cepstral Coefficients)
+- Spectral contrast
+- Spectral rolloff
+- Zero-crossing rate
+- Chroma features
+
+4. Deep learning model architecture
+- 2D Convolutional Neural Network (CNN) blocks
+- Batch Normalization
+- Max Pooling
+- Dropout regularization
+- Bidirectional LSTM (temporal modeling)
+- Custom Attention Layer
+- Dense classifier with softmax output
+
+5. Training techniques
+- Adam optimizer
+- Categorical cross-entropy loss
+- EarlyStopping
+- ReduceLROnPlateau
+- ModelCheckpoint (best model saving)
+- Stratified train/validation/test split
+
+6. Evaluation and validation techniques
+- Accuracy
+- Precision
+- Recall
+- F1-score
+- ROC-AUC
+- PR-AUC
+- Balanced Accuracy
+- Matthews Correlation Coefficient (MCC)
+- Brier Score
+- Log Loss
+- Expected Calibration Error (ECE)
+- Confusion Matrix
+- Classification Report
+- ROC Curve
+- Precision-Recall Curve
+- 95% confidence interval for accuracy (Wilson interval)
+- 95% bootstrap confidence interval for F1-score
+- Threshold optimization for best F1
+
+7. Inference and testing workflow
+- Single-file prediction
+- Batch prediction
+- Folder-level testing
+- Probability-based Real/Fake output
+
+8. Optional external/advanced integration
+- External forensic API ensembling (ElevenLabs/Resemble hooks)
+- Optional LLM-assisted research review from computed metrics
+  (used for analysis/report writing, not for base metric computation)
+
+9. Cybersecurity-focused techniques implemented in code
+- Out-of-distribution (OOD) detection:
+  - Confidence + entropy based OOD flagging
+- Calibration-aware security thresholds:
+  - Risk-tiered decision policy (allow / review / block)
+- Explainability and forensic traceability:
+  - JSON audit logging per secure prediction
+- Secure model lifecycle:
+  - SHA256 model checksum generation and verification utilities
+- Real-time monitoring:
+  - Drift monitor based on rolling fake-probability statistics
+- Adversarial robustness testing:
+  - Attack simulation evaluation (noise, pitch-shift, speed-up, compression)
+  - Accuracy drop vs clean-audio baseline

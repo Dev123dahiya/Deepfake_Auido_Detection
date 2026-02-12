@@ -1,6 +1,6 @@
 # Dee-fake Audio Detector
 
-Deepfake Audio Detection project developed by **Khushi Bishnoi** to classify audio as **Real** or **Fake** using deep learning and advanced audio forensics features.
+Deepfake Audio Detection project developed by **Khushi Bishnoi** to classify audio as **Real** or **Fake** using deep learning, advanced audio forensics features, and optional LLM-assisted research analysis.
 
 ## Work Done
 
@@ -28,7 +28,13 @@ I designed and implemented an end-to-end pipeline that includes:
   - ModelCheckpoint
 - **Evaluation**:
   - Accuracy, Precision, Recall, F1-score, ROC-AUC
+  - PR-AUC, Balanced Accuracy, MCC, Brier Score, Log Loss, ECE
+  - Confidence intervals (Wilson + bootstrap)
+  - Threshold optimization for best F1
   - Confusion matrix and classification report
+- **LLM-assisted layer (optional)**:
+  - Generates research-style critique and improvement suggestions from computed metrics
+  - Useful for paper writing and discussion section drafting
 
 ## Project Structure
 
@@ -86,8 +92,48 @@ python main.py train --dataset "C:\path\to\dataset" --output outputs --max-files
 python main.py predict --model outputs\deepfake_detector_enhanced_final.h5 --audio "C:\path\to\file.wav"
 ```
 
+### Advanced Evaluation (journal-style metrics)
+
+```powershell
+python main.py evaluate --model outputs\deepfake_detector_enhanced_final.h5 --dataset "C:\path\to\dataset" --output outputs
+```
+
+### Robustness Evaluation (cybersecurity)
+
+```powershell
+python main.py evaluate --model outputs\deepfake_detector_enhanced_final.h5 --dataset "C:\path\to\dataset" --output outputs --robustness-check --max-robustness-samples 200
+```
+
+### Optional LLM Insights
+
+Set your API key first:
+
+```powershell
+$env:OPENAI_API_KEY="your_api_key_here"
+```
+
+Then run:
+
+```powershell
+python main.py evaluate --model outputs\deepfake_detector_enhanced_final.h5 --dataset "C:\path\to\dataset" --output outputs --llm-insights
+```
+
+### Security-Aware Prediction (OOD + risk policy + audit log)
+
+```powershell
+python main.py secure-predict --model outputs\deepfake_detector_enhanced_final.h5 --audio "C:\path\to\file.wav" --audit-log outputs\security_audit.jsonl
+```
+
+### Model Checksum (integrity)
+
+```powershell
+python main.py checksum --model outputs\deepfake_detector_enhanced_final.h5
+```
+
 ## Notes
 
 - This project supports both **basic** and **enhanced** feature modes.
 - Use `--basic` in CLI commands to run with basic features only.
 - Trained model files (`.h5`) are generated in the `outputs/` directory.
+- LLM does not compute base metrics directly; it analyzes computed results and proposes research improvements.
+- Security commands add OOD detection, risk-tiered decisions, checksum verification support, drift monitoring output, and audit logging.
