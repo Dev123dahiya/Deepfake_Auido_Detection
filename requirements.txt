@@ -7,3 +7,6 @@ matplotlib
 seaborn
 opencv-python
 requests
+fastapi
+uvicorn[standard]
+python-multipart

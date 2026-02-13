@@ -130,6 +130,53 @@ python main.py secure-predict --model outputs\deepfake_detector_enhanced_final.h
 python main.py checksum --model outputs\deepfake_detector_enhanced_final.h5
 ```
 
+## Live Server Deployment
+
+### 1. Run API locally
+
+```powershell
+pip install -r requirements.txt
+$env:MODEL_PATH="outputs\deepfake_detector_enhanced_final.h5"
+uvicorn serve_api:app --host 0.0.0.0 --port 8000
+```
+
+Health check:
+
+```text
+GET http://127.0.0.1:8000/health
+```
+
+### 2. API Endpoints
+
+- `GET /health`
+- `GET /checksum`
+- `POST /predict` (multipart file upload)
+- `POST /secure-predict` (multipart file upload + security thresholds)
+
+### 3. Deploy on Render (recommended)
+
+Repository already includes deployment files:
+
+- `Dockerfile`
+- `render.yaml`
+- `Procfile`
+- `runtime.txt`
+
+Steps:
+
+1. Push latest code to GitHub.
+2. In Render, create a new Web Service from your repo.
+3. Render auto-detects Docker setup.
+4. Set environment variable:
+   - `MODEL_PATH=outputs/deepfake_detector_enhanced_final.h5`
+   - Optional (recommended for cloud): `MODEL_URL=<direct_download_link_to_your_h5_model>`
+5. Deploy.
+
+Important:
+- You must ensure trained model file exists at `MODEL_PATH` inside the deployed app.
+- If model file is missing but `MODEL_URL` is set, API will auto-download model at startup.
+- If model file is not present, API startup will fail by design.
+
 ## Notes
 
 - This project supports both **basic** and **enhanced** feature modes.
