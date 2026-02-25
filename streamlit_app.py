@@ -9,9 +9,6 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src.deepfake_audio_project.inference import secure_predict_single_audio
-from src.deepfake_audio_project.model_io import create_default_preprocessor, load_trained_model
-
 
 st.set_page_config(page_title="Deepfake Audio Detector", page_icon=":studio_microphone:", layout="wide")
 st.title("Deepfake Audio Detector")
@@ -20,6 +17,8 @@ st.caption("Analyze uploaded or recorded audio with local model inference, confi
 
 @st.cache_resource
 def get_model_and_preprocessor(model_path: str):
+    from src.deepfake_audio_project.model_io import create_default_preprocessor, load_trained_model
+
     model = load_trained_model(model_path)
     preprocessor = create_default_preprocessor()
     return model, preprocessor
@@ -141,6 +140,8 @@ if st.button("Analyze Audio", type="primary"):
     temp_audio_path = save_temp_audio(audio_name, audio_bytes)
     try:
         model, preprocessor = get_model_and_preprocessor(model_path)
+        from src.deepfake_audio_project.inference import secure_predict_single_audio
+
         result = secure_predict_single_audio(
             model=model,
             preprocessor=preprocessor,
@@ -170,8 +171,15 @@ if st.button("Analyze Audio", type="primary"):
         st.bar_chart(probs_df)
 
         security_col1, security_col2, security_col3 = st.columns(3)
-        security_col1.metric("Security Decision", result["security_decision"]["action"])
-        security_col2.metric("Risk Level", result["security_decision"]["risk_level"])
+        decision = result.get("security_decision")
+        if isinstance(decision, dict):
+            decision_action = decision.get("action", "N/A")
+            decision_risk = decision.get("risk_level", "N/A")
+        else:
+            decision_action = str(decision) if decision is not None else "N/A"
+            decision_risk = "N/A"
+        security_col1.metric("Security Decision", decision_action)
+        security_col2.metric("Risk Level", decision_risk)
         security_col3.metric("OOD Flag", "Yes" if result["ood"]["is_ood"] else "No")
 
         st.subheader("Forensic Analysis Graphs")
