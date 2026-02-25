@@ -130,52 +130,20 @@ python main.py secure-predict --model outputs\deepfake_detector_enhanced_final.h
 python main.py checksum --model outputs\deepfake_detector_enhanced_final.h5
 ```
 
-## Live Server Deployment
-
-### 1. Run API locally
+### Streamlit App (Upload + Live Recording + Graphs)
 
 ```powershell
-pip install -r requirements.txt
-$env:MODEL_PATH="outputs\deepfake_detector_enhanced_final.h5"
-uvicorn serve_api:app --host 0.0.0.0 --port 8000
+streamlit run streamlit_app.py
 ```
 
-Health check:
+In the app you can:
+- Upload an audio file (`wav/mp3/flac/m4a`) or record live audio.
+- Run fake/real prediction with confidence.
+- View probability graph, security decision, OOD flag, and forensic plots (waveform, mel spectrogram, MFCC, laplacian, temporal forensic signals).
+- Inspect full JSON prediction output.
 
-```text
-GET http://127.0.0.1:8000/health
-```
-
-### 2. API Endpoints
-
-- `GET /health`
-- `GET /checksum`
-- `POST /predict` (multipart file upload)
-- `POST /secure-predict` (multipart file upload + security thresholds)
-
-### 3. Deploy on Render (recommended)
-
-Repository already includes deployment files:
-
-- `Dockerfile`
-- `render.yaml`
-- `Procfile`
-- `runtime.txt`
-
-Steps:
-
-1. Push latest code to GitHub.
-2. In Render, create a new Web Service from your repo.
-3. Render auto-detects Docker setup.
-4. Set environment variable:
-   - `MODEL_PATH=outputs/deepfake_detector_enhanced_final.h5`
-   - Optional (recommended for cloud): `MODEL_URL=<direct_download_link_to_your_h5_model>`
-5. Deploy.
-
-Important:
-- You must ensure trained model file exists at `MODEL_PATH` inside the deployed app.
-- If model file is missing but `MODEL_URL` is set, API will auto-download model at startup.
-- If model file is not present, API startup will fail by design.
+Model file should exist locally (default path in sidebar):
+- `outputs/deepfake_detector_enhanced_final.h5`
 
 ## Notes
 
@@ -183,4 +151,4 @@ Important:
 - Use `--basic` in CLI commands to run with basic features only.
 - Trained model files (`.h5`) are generated in the `outputs/` directory.
 - LLM does not compute base metrics directly; it analyzes computed results and proposes research improvements.
-- Security commands add OOD detection, risk-tiered decisions, checksum verification support, drift monitoring output, and audit logging.
+- Security analysis in Streamlit includes OOD detection, risk-tiered decisions, drift output, and audit logging.
