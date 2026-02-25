@@ -4,9 +4,6 @@ from pathlib import Path
 
 import streamlit as st
 
-from src.deepfake_audio_project.inference import test_single_audio
-from src.deepfake_audio_project.model_io import create_default_preprocessor, load_trained_model
-
 
 st.set_page_config(page_title="Deepfake Audio Detector", page_icon=":studio_microphone:", layout="centered")
 st.title("Deepfake Audio Detector")
@@ -15,9 +12,18 @@ st.write("Upload a trained `.h5` model (optional) and an audio file to classify 
 
 @st.cache_resource
 def _load_model_and_preprocessor(model_path: str):
+    from src.deepfake_audio_project.model_io import create_default_preprocessor, load_trained_model
+
     model = load_trained_model(model_path)
     preprocessor = create_default_preprocessor()
     return model, preprocessor
+
+
+@st.cache_resource
+def _get_test_single_audio_func():
+    from src.deepfake_audio_project.inference import test_single_audio
+
+    return test_single_audio
 
 
 def _save_uploaded_file(uploaded_file, suffix: str) -> str:
@@ -55,6 +61,12 @@ use_basic = st.checkbox("Use basic features (disable enhanced features)", value=
 if st.button("Predict", type="primary"):
     if audio_file is None:
         st.warning("Please upload an audio file.")
+        st.stop()
+
+    try:
+        test_single_audio = _get_test_single_audio_func()
+    except Exception as exc:
+        st.error(f"Failed to load inference modules: {exc}")
         st.stop()
 
     temp_audio_path = _save_uploaded_file(audio_file, Path(audio_file.name).suffix or ".wav")
