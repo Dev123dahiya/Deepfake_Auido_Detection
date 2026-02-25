@@ -1,93 +1,58 @@
 import os
-import tempfile
 from pathlib import Path
 
+import requests
 import streamlit as st
 
 
 st.set_page_config(page_title="Deepfake Audio Detector", page_icon=":studio_microphone:", layout="centered")
 st.title("Deepfake Audio Detector")
-st.write("Upload a trained `.h5` model (optional) and an audio file to classify it as Real or Fake.")
+st.write("Upload an audio file and run prediction through your deployed API service.")
 
-
-@st.cache_resource
-def _load_model_and_preprocessor(model_path: str):
-    from src.deepfake_audio_project.model_io import create_default_preprocessor, load_trained_model
-
-    model = load_trained_model(model_path)
-    preprocessor = create_default_preprocessor()
-    return model, preprocessor
-
-
-@st.cache_resource
-def _get_test_single_audio_func():
-    from src.deepfake_audio_project.inference import test_single_audio
-
-    return test_single_audio
-
-
-def _save_uploaded_file(uploaded_file, suffix: str) -> str:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-        tmp.write(uploaded_file.getbuffer())
-        return tmp.name
-
-
-default_model_path = os.getenv("MODEL_PATH", "outputs/deepfake_detector_enhanced_final.h5")
-model_path = None
+default_api_url = os.getenv("BACKEND_API_URL", "").strip()
 
 with st.sidebar:
-    st.header("Model Settings")
-    st.caption(f"Default MODEL_PATH: `{default_model_path}`")
-    uploaded_model = st.file_uploader("Upload model (.h5)", type=["h5"])
+    st.header("API Settings")
+    api_url = st.text_input("Backend API URL", value=default_api_url, placeholder="https://your-api.onrender.com")
+    use_basic = st.checkbox("Use basic features", value=False)
 
-if uploaded_model is not None:
-    model_path = _save_uploaded_file(uploaded_model, ".h5")
-elif Path(default_model_path).exists():
-    model_path = default_model_path
-
-if not model_path:
-    st.error("No model found. Upload a `.h5` model from the sidebar or set `MODEL_PATH` to an existing file.")
-    st.stop()
-
-try:
-    model, preprocessor = _load_model_and_preprocessor(model_path)
-except Exception as exc:
-    st.error(f"Failed to load model: {exc}")
+if not api_url:
+    st.info("Set Backend API URL in sidebar. Example: `https://your-api.onrender.com`")
     st.stop()
 
 audio_file = st.file_uploader("Upload audio", type=["wav", "mp3", "flac", "m4a"])
-use_basic = st.checkbox("Use basic features (disable enhanced features)", value=False)
 
 if st.button("Predict", type="primary"):
     if audio_file is None:
         st.warning("Please upload an audio file.")
         st.stop()
 
+    base_url = api_url.rstrip("/")
+    endpoint = f"{base_url}/predict"
+    params = {"use_basic_features": str(use_basic).lower()}
+
+    suffix = Path(audio_file.name).suffix or ".wav"
+    mime = "audio/wav" if suffix.lower() == ".wav" else "application/octet-stream"
+    files = {"file": (audio_file.name, audio_file.getvalue(), mime)}
+
     try:
-        test_single_audio = _get_test_single_audio_func()
-    except Exception as exc:
-        st.error(f"Failed to load inference modules: {exc}")
+        response = requests.post(endpoint, params=params, files=files, timeout=120)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as exc:
+        st.error(f"Request failed: {exc}")
         st.stop()
 
-    temp_audio_path = _save_uploaded_file(audio_file, Path(audio_file.name).suffix or ".wav")
     try:
-        result = test_single_audio(model, preprocessor, temp_audio_path, use_enhanced=not use_basic)
-    finally:
-        try:
-            os.remove(temp_audio_path)
-        except OSError:
-            pass
+        result = response.json()
+    except ValueError:
+        st.error(f"Backend returned non-JSON response: {response.text[:500]}")
+        st.stop()
 
-    if not result:
-        st.error("Prediction failed. Please try another audio file.")
-    else:
-        st.subheader("Result")
-        st.metric("Prediction", result["prediction"])
-        st.metric("Confidence", f'{float(result["confidence"]) * 100:.2f}%')
-        st.write(
-            {
-                "real_prob": float(result["real_prob"]),
-                "fake_prob": float(result["fake_prob"]),
-                "file": result["file"],
-            }
-        )
+    st.subheader("Result")
+    st.metric("Prediction", str(result.get("prediction", "N/A")))
+
+    confidence = result.get("confidence")
+    if isinstance(confidence, (float, int)):
+        st.metric("Confidence", f"{float(confidence) * 100:.2f}%")
+
+    st.json(result)
