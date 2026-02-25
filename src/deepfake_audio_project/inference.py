@@ -5,13 +5,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from .evaluation import predict_single_audio
 from .forensics_api import DeepfakeForensicsIntegration
 from .security import AuditLogger, DriftMonitor, RiskPolicy, is_ood_prediction
 
 
+def _predict_single_audio_label_conf(model, preprocessor, audio_path, class_names=("Real", "Fake"), use_enhanced=True):
+    audio = preprocessor.load_audio(audio_path)
+    if audio is None:
+        return None, None
+    features = preprocessor.create_combined_features(audio, use_enhanced=use_enhanced)
+    prediction = model.predict(np.expand_dims(features, axis=0), verbose=0)
+    predicted_idx = int(prediction.argmax())
+    return class_names[predicted_idx], float(prediction[0][predicted_idx])
+
+
 def predict_with_ensemble(model, preprocessor, audio_path, use_api_ensemble=False, elevenlabs_key=None, resemble_key=None):
-    predicted_class, confidence = predict_single_audio(
+    predicted_class, confidence = _predict_single_audio_label_conf(
         model, preprocessor, audio_path, class_names=("Real", "Fake"), use_enhanced=True
     )
     if predicted_class is None:
