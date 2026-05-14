@@ -1,9 +1,9 @@
 .git
-.gitignore
-.venv
-__pycache__
+__pycache__/
 *.pyc
-dataset
-outputs
-other_files
-
+*.log
+.venv/
+dataset/
+outputs/
+*.h5
+.ipynb_checkpoints/

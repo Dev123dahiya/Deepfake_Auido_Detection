@@ -2,6 +2,8 @@ import os
 import tempfile
 from pathlib import Path
 
+os.environ.setdefault("USE_TF", "0")
+
 import librosa
 import librosa.display
 import matplotlib.pyplot as plt
@@ -10,9 +12,18 @@ import pandas as pd
 import streamlit as st
 
 
+def load_css():
+    css_path = Path(__file__).with_name("style.css")
+    with open(css_path, "r", encoding="utf-8") as css_file:
+        st.markdown(f"<style>{css_file.read()}</style>", unsafe_allow_html=True)
+
+
 st.set_page_config(page_title="Deepfake Audio Detector", page_icon=":studio_microphone:", layout="wide")
+load_css()
 st.title("Deepfake Audio Detector")
 st.caption("Analyze uploaded or recorded audio with local model inference, confidence, and forensic feature plots.")
+
+DEFAULT_HF_MODEL = "Hemgg/Deepfake-audio-detection"
 
 
 @st.cache_resource
@@ -24,11 +35,71 @@ def get_model_and_preprocessor(model_path: str):
     return model, preprocessor
 
 
+@st.cache_resource
+def get_hf_detector(model_id: str):
+    from transformers import pipeline
+
+    return pipeline("audio-classification", model=model_id, framework="pt")
+
+
+@st.cache_resource
+def get_plot_preprocessor():
+    from src.deepfake_audio_project.preprocessing import AudioPreprocessor
+
+    return AudioPreprocessor(sample_rate=16000, duration=3, n_mels=128, hop_length=512, n_fft=2048)
+
+
 def save_temp_audio(file_name: str, audio_bytes: bytes) -> str:
     suffix = Path(file_name).suffix or ".wav"
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
         tmp.write(audio_bytes)
         return tmp.name
+
+
+def normalize_hf_predictions(raw_predictions):
+    scores = {"Real": 0.0, "Fake": 0.0}
+    normalized_items = []
+
+    for item in raw_predictions:
+        label = str(item.get("label", "")).strip()
+        score = float(item.get("score", 0.0))
+        label_lower = label.lower()
+        if any(token in label_lower for token in ("fake", "spoof", "synthetic", "ai")):
+            normalized_label = "Fake"
+        elif any(token in label_lower for token in ("real", "bonafide", "bona-fide", "human", "genuine")):
+            normalized_label = "Real"
+        else:
+            normalized_label = label
+
+        if normalized_label in scores:
+            scores[normalized_label] = max(scores[normalized_label], score)
+        normalized_items.append({"label": label, "normalized_label": normalized_label, "score": score})
+
+    if scores["Real"] == 0.0 and scores["Fake"] == 0.0 and len(raw_predictions) >= 2:
+        sorted_predictions = sorted(raw_predictions, key=lambda item: float(item.get("score", 0.0)), reverse=True)
+        scores["Fake"] = float(sorted_predictions[0].get("score", 0.0))
+        scores["Real"] = float(sorted_predictions[1].get("score", 0.0))
+
+    total = scores["Real"] + scores["Fake"]
+    if total > 0:
+        scores = {label: score / total for label, score in scores.items()}
+
+    prediction = "Fake" if scores["Fake"] >= scores["Real"] else "Real"
+    confidence = scores[prediction]
+    return {
+        "prediction": prediction,
+        "confidence": confidence,
+        "real_prob": scores["Real"],
+        "fake_prob": scores["Fake"],
+        "raw_model_output": normalized_items,
+    }
+
+
+def predict_with_huggingface(audio_path: str, model_id: str, max_seconds: int):
+    detector = get_hf_detector(model_id)
+    audio, sample_rate = librosa.load(audio_path, sr=16000, mono=True, duration=max_seconds)
+    raw_predictions = detector({"array": audio, "sampling_rate": sample_rate}, top_k=2)
+    return normalize_hf_predictions(raw_predictions)
 
 
 def render_analysis_plots(preprocessor, audio: np.ndarray):
@@ -97,6 +168,14 @@ def render_analysis_plots(preprocessor, audio: np.ndarray):
 
 
 with st.sidebar:
+    st.header("Detector")
+    detector_backend = st.selectbox(
+        "Prediction backend",
+        ["Pretrained Hugging Face model", "Local trained Keras model"],
+    )
+    hf_model_id = st.text_input("Hugging Face model", value=DEFAULT_HF_MODEL)
+    max_hf_seconds = st.slider("Seconds to analyze", 2, 20, 6, 1)
+    show_forensic_plots = st.checkbox("Show forensic plots", value=False)
     st.header("Model")
     model_path = st.text_input("Model path (.h5)", value="outputs/deepfake_detector_enhanced_final.h5")
     use_basic = st.checkbox("Use basic features only", value=False)
@@ -130,7 +209,7 @@ if audio_bytes:
     st.audio(audio_bytes)
 
 if st.button("Analyze Audio", type="primary"):
-    if not os.path.exists(model_path):
+    if detector_backend == "Local trained Keras model" and not os.path.exists(model_path):
         st.error(f"Model file not found: {model_path}")
         st.stop()
     if audio_bytes is None:
@@ -139,20 +218,29 @@ if st.button("Analyze Audio", type="primary"):
 
     temp_audio_path = save_temp_audio(audio_name, audio_bytes)
     try:
-        model, preprocessor = get_model_and_preprocessor(model_path)
-        from src.deepfake_audio_project.inference import secure_predict_single_audio
+        preprocessor = get_plot_preprocessor()
+        if detector_backend == "Pretrained Hugging Face model":
+            with st.spinner("Running fast voice check..."):
+                result = predict_with_huggingface(temp_audio_path, hf_model_id, max_hf_seconds)
+            result["backend"] = detector_backend
+            result["model"] = hf_model_id
+            result["seconds_analyzed"] = max_hf_seconds
+        else:
+            model, preprocessor = get_model_and_preprocessor(model_path)
+            from src.deepfake_audio_project.inference import secure_predict_single_audio
 
-        result = secure_predict_single_audio(
-            model=model,
-            preprocessor=preprocessor,
-            audio_path=temp_audio_path,
-            use_enhanced=not use_basic,
-            ood_confidence_threshold=ood_confidence_threshold,
-            ood_entropy_threshold=ood_entropy_threshold,
-            low_risk_threshold=low_risk_threshold,
-            high_risk_threshold=high_risk_threshold,
-            audit_log_path="outputs/security_audit.jsonl",
-        )
+            with st.spinner("Running local model inference..."):
+                result = secure_predict_single_audio(
+                    model=model,
+                    preprocessor=preprocessor,
+                    audio_path=temp_audio_path,
+                    use_enhanced=not use_basic,
+                    ood_confidence_threshold=ood_confidence_threshold,
+                    ood_entropy_threshold=ood_entropy_threshold,
+                    low_risk_threshold=low_risk_threshold,
+                    high_risk_threshold=high_risk_threshold,
+                    audit_log_path="outputs/security_audit.jsonl",
+                )
 
         if not result:
             st.error("Prediction failed. Check audio format and model compatibility.")
@@ -170,26 +258,33 @@ if st.button("Analyze Audio", type="primary"):
         st.subheader("Probability Distribution")
         st.bar_chart(probs_df)
 
-        security_col1, security_col2, security_col3 = st.columns(3)
-        decision = result.get("security_decision")
-        if isinstance(decision, dict):
-            decision_action = decision.get("action", "N/A")
-            decision_risk = decision.get("risk_level", "N/A")
+        if detector_backend == "Local trained Keras model":
+            security_col1, security_col2, security_col3 = st.columns(3)
+            decision = result.get("security_decision")
+            if isinstance(decision, dict):
+                decision_action = decision.get("action", "N/A")
+                decision_risk = decision.get("risk_level", "N/A")
+            else:
+                decision_action = str(decision) if decision is not None else "N/A"
+                decision_risk = "N/A"
+            security_col1.metric("Security Decision", decision_action)
+            security_col2.metric("Risk Level", decision_risk)
+            security_col3.metric("OOD Flag", "Yes" if result["ood"]["is_ood"] else "No")
         else:
-            decision_action = str(decision) if decision is not None else "N/A"
-            decision_risk = "N/A"
-        security_col1.metric("Security Decision", decision_action)
-        security_col2.metric("Risk Level", decision_risk)
-        security_col3.metric("OOD Flag", "Yes" if result["ood"]["is_ood"] else "No")
+            st.info(
+                "This uses a pretrained public model. Treat results as a screening signal, not forensic proof."
+            )
 
-        st.subheader("Forensic Analysis Graphs")
-        audio_arr = preprocessor.load_audio(temp_audio_path)
-        if audio_arr is None:
-            st.error("Could not decode audio for analysis plots.")
-        else:
-            summary_stats = render_analysis_plots(preprocessor, audio_arr)
-            st.subheader("Analysis Summary")
-            st.json(summary_stats)
+        if show_forensic_plots:
+            st.subheader("Forensic Analysis Graphs")
+            with st.spinner("Rendering plots..."):
+                audio_arr = preprocessor.load_audio(temp_audio_path)
+                if audio_arr is None:
+                    st.error("Could not decode audio for analysis plots.")
+                else:
+                    summary_stats = render_analysis_plots(preprocessor, audio_arr)
+                    st.subheader("Analysis Summary")
+                    st.json(summary_stats)
 
         with st.expander("Full Prediction JSON"):
             st.json(result)

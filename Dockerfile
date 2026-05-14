@@ -1,16 +1,16 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements-ml.txt .
-RUN pip install --no-cache-dir -r requirements-ml.txt
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-ENV PORT=8000
-ENV MODEL_PATH=outputs/deepfake_detector_enhanced_final.h5
+ENV STREAMLIT_SERVER_HEADLESS=true
+ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
 
-EXPOSE 8000
+EXPOSE 8501
 
-CMD ["sh", "-c", "uvicorn serve_api:app --host 0.0.0.0 --port ${PORT}"]
+CMD ["sh", "-c", "streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port ${PORT:-8501}"]
 

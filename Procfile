@@ -1,2 +1,2 @@
-web: uvicorn serve_api:app --host 0.0.0.0 --port ${PORT:-8000}
+web: streamlit run streamlit_app.py --server.address 0.0.0.0 --server.port ${PORT:-8501}
 

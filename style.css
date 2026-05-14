@@ -1,0 +1,241 @@
+:root {
+    --bg: #0d0f14;
+    --panel: #1a1d27;
+    --sidebar: #13161e;
+    --text: #e0e0e0;
+    --muted: #a7afbf;
+    --cyan: #00e5ff;
+    --cyan-soft: rgba(0, 229, 255, 0.24);
+    --blue: #0077b6;
+    --blue-bright: #00b4d8;
+    --border: rgba(0, 229, 255, 0.22);
+    --success-bg: #092217;
+    --success-border: #22c55e;
+    --error-bg: #2a0d12;
+    --error-border: #ef4444;
+}
+
+html,
+body,
+[data-testid="stAppViewContainer"],
+.stApp {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+[data-testid="stHeader"] {
+    background: rgba(13, 15, 20, 0.82);
+    backdrop-filter: blur(10px);
+}
+
+[data-testid="stMainBlockContainer"] {
+    padding-top: 2.25rem;
+}
+
+h1 {
+    color: var(--cyan) !important;
+    font-weight: 800 !important;
+    text-shadow: 0 0 12px rgba(0, 229, 255, 0.78), 0 0 32px rgba(0, 180, 216, 0.38);
+}
+
+h2,
+h3,
+h4,
+p,
+label,
+span,
+div {
+    color: var(--text);
+}
+
+[data-testid="stCaptionContainer"],
+[data-testid="stMarkdownContainer"] p {
+    color: var(--muted);
+}
+
+[data-testid="stSidebar"] {
+    background: var(--sidebar);
+    border-right: 1px solid rgba(0, 229, 255, 0.12);
+}
+
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span {
+    color: var(--muted);
+}
+
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3 {
+    color: var(--text);
+}
+
+.stButton > button,
+[data-testid="stBaseButton-primary"],
+[data-testid="stBaseButton-secondary"] {
+    background: linear-gradient(135deg, var(--blue), var(--blue-bright)) !important;
+    color: #ffffff !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 8px 22px rgba(0, 180, 216, 0.22);
+    font-weight: 700 !important;
+    transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
+}
+
+.stButton > button:hover,
+[data-testid="stBaseButton-primary"]:hover,
+[data-testid="stBaseButton-secondary"]:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.52), 0 10px 26px rgba(0, 180, 216, 0.28);
+}
+
+.stButton > button:active,
+[data-testid="stBaseButton-primary"]:active,
+[data-testid="stBaseButton-secondary"]:active {
+    transform: translateY(0);
+}
+
+[data-testid="stFileUploader"] {
+    background: var(--panel);
+    border: 1.5px dashed rgba(0, 229, 255, 0.58);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+    transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+[data-testid="stFileUploader"]:hover {
+    background: #1f2330;
+    border-color: var(--cyan);
+    box-shadow: 0 0 22px rgba(0, 229, 255, 0.2);
+}
+
+[data-testid="stFileUploaderDropzone"] {
+    background: transparent;
+    border: 0;
+}
+
+[data-testid="stMetric"],
+[data-testid="metric-container"] {
+    background: linear-gradient(180deg, #1a1d27, #141822);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+[data-testid="stMetricValue"],
+[data-testid="metric-container"] [data-testid="stMetricValue"] {
+    color: var(--cyan) !important;
+    text-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+}
+
+[data-testid="stMetricLabel"],
+[data-testid="metric-container"] label {
+    color: var(--muted) !important;
+}
+
+[data-baseweb="select"] > div,
+[data-testid="stSelectbox"] div[role="combobox"],
+[data-testid="stTextInput"] input,
+[data-testid="stNumberInput"] input {
+    background: #151923 !important;
+    color: var(--text) !important;
+    border: 1px solid rgba(0, 229, 255, 0.2) !important;
+    border-radius: 8px !important;
+}
+
+[data-baseweb="popover"],
+[data-baseweb="menu"] {
+    background: #151923 !important;
+    border: 1px solid rgba(0, 229, 255, 0.24);
+}
+
+[role="option"] {
+    background: #151923 !important;
+    color: var(--text) !important;
+}
+
+[role="option"]:hover {
+    background: #1f2b38 !important;
+}
+
+.stProgress > div > div > div > div,
+[data-testid="stProgress"] div[role="progressbar"] > div {
+    background: linear-gradient(90deg, var(--blue), var(--cyan)) !important;
+}
+
+[data-testid="stAlert"] {
+    background: #151923;
+    border: 1px solid rgba(0, 229, 255, 0.18);
+    border-radius: 10px;
+}
+
+[data-testid="stAlert"][kind="success"],
+.stSuccess {
+    background: var(--success-bg) !important;
+    border-left: 4px solid var(--success-border) !important;
+}
+
+[data-testid="stAlert"][kind="error"],
+.stException,
+.stError {
+    background: var(--error-bg) !important;
+    border-left: 4px solid var(--error-border) !important;
+}
+
+[data-testid="stImage"] img,
+[data-testid="stPyplot"] img,
+.stImage img {
+    border-radius: 12px;
+    border: 1px solid rgba(0, 229, 255, 0.42);
+    box-shadow: 0 0 22px rgba(0, 229, 255, 0.22), 0 14px 34px rgba(0, 0, 0, 0.34);
+}
+
+audio {
+    width: 100%;
+    filter: hue-rotate(155deg) saturate(1.45) brightness(0.92);
+}
+
+[data-testid="stAudio"] {
+    width: 100%;
+}
+
+[data-testid="stBarChart"],
+[data-testid="stVegaLiteChart"] {
+    background: var(--panel);
+    border: 1px solid rgba(0, 229, 255, 0.12);
+    border-radius: 12px;
+    padding: 0.75rem;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.24);
+}
+
+[data-testid="stExpander"] {
+    background: #151923;
+    border: 1px solid rgba(0, 229, 255, 0.14);
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #090b10;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #263241;
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--cyan);
+}
+
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #263241 #090b10;
+}
